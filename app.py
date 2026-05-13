@@ -2,60 +2,60 @@
 
 import streamlit as st
 from PIL import Image
-import tensorflow as tf
 import numpy as np
+from keras.models import load_model
 
 st.set_page_config(page_title="Animal Detector", layout="centered")
 
-st.title("🐶 Animal Detector App")
+st.title("🐾 Animal Detector using Teachable Machine")
 
-st.write("Upload an image and the AI will try to detect the animal.")
+st.write("Upload an animal image and detect the animal.")
 
-# Load MobileNet model
-model = tf.keras.applications.MobileNetV2(weights="imagenet")
+# Load Teachable Machine model
+model = load_model("keras_model.h5", compile=False)
+
+# Load labels
+class_names = open("labels.txt", "r").readlines()
 
 # Upload image
 uploaded_file = st.file_uploader(
-    "Upload an Animal Image",
+    "Upload an Image",
     type=["jpg", "jpeg", "png"]
 )
 
 if uploaded_file is not None:
 
     # Open image
-    image = Image.open(uploaded_file)
+    image = Image.open(uploaded_file).convert("RGB")
 
-    # Show image
     st.image(image, caption="Uploaded Image", use_container_width=True)
 
-    # Predict button
     if st.button("Detect Animal"):
 
         # Resize image
-        img = image.resize((224, 224))
+        image = image.resize((224, 224))
 
-        # Convert image to array
-        img_array = tf.keras.preprocessing.image.img_to_array(img)
+        # Convert to array
+        image_array = np.asarray(image)
 
-        # Expand dimensions
-        img_array = np.expand_dims(img_array, axis=0)
+        # Normalize image
+        normalized_image_array = (image_array.astype(np.float32) / 127.5) - 1
 
-        # Preprocess image
-        img_array = tf.keras.applications.mobilenet_v2.preprocess_input(img_array)
+        # Prepare input
+        data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
+        data[0] = normalized_image_array
 
-        # Prediction
-        predictions = model.predict(img_array)
+        # Predict
+        prediction = model.predict(data)
 
-        # Decode prediction
-        decoded = tf.keras.applications.mobilenet_v2.decode_predictions(
-            predictions,
-            top=3
-        )[0]
+        index = np.argmax(prediction)
 
-        st.subheader("Prediction Results")
+        class_name = class_names[index]
 
-        for i, pred in enumerate(decoded):
-            animal_name = pred[1].replace("_", " ").title()
-            confidence = round(pred[2] * 100, 2)
+        confidence_score = prediction[0][index]
 
-            st.write(f"{i+1}. {animal_name} — {confidence}% confidence")
+        st.subheader("Prediction")
+
+        st.write(f"Animal: {class_name[2:].strip()}")
+
+        st.write(f"Confidence: {round(confidence_score * 100, 2)}%")
