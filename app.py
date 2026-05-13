@@ -4,6 +4,7 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 from keras.models import load_model
+model = load_model("keras_model.h5", compile=False)
 
 st.set_page_config(page_title="Animal Detector", layout="centered")
 
